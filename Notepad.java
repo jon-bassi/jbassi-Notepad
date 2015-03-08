@@ -8,7 +8,7 @@ import java.io.*;
 import java.util.Calendar;
 import java.util.Scanner;
 
-public class Notepad implements ActionListener
+public class JNotepad implements ActionListener
 {
    String filename = "Untitled";
    boolean edited = false; // check if there's any text before closing
@@ -18,27 +18,23 @@ public class Notepad implements ActionListener
    JMenuItem statusBar;
    String clipboard = "";
    
-   public Notepad(int height, int width, int wrap, Font fontType) 
+   public JNotepad(int height, int width, int wrap, Font fontType) 
    {
-      frame = new JFrame(filename + " - Notepad");
+      frame = new JFrame(filename + " - JNotepad");
       frame.setSize(width,height);
       frame.setLocationRelativeTo(null);
-      //frame.setIconImage(new ImageIcon("Notepad.png").getImage());
+      frame.setIconImage(new ImageIcon("JNotepad.png").getImage());
       frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
       frame.addWindowListener(new WindowAdapter()
       {
          public void windowClosing(WindowEvent we)
          {
-            if(NotepadExit())
-            {
-               return;
-            }
-            else
+            if(!jNotepadExit())
             {
                int wordWrap = 0;
                if (pad.getLineWrap())
                   wordWrap = 1;
-               String iniData = "j. bassi Notepad (c) 2015\nDefaultHeight:"
+               String iniData = "j. bassi JNotepad (c) 2015\nDefaultHeight:"
                      + frame.getHeight() + "\nDefaultWidth:" + frame.getWidth()
                      + "\nDefaultFontName:" + pad.getFont().getFontName()
                      + "\nDefaultFontStyle:" + pad.getFont().getStyle()
@@ -46,7 +42,7 @@ public class Notepad implements ActionListener
                      + "\nWordWrap:" + wordWrap;
                try
                {
-                  FileWriter writeToFile = new FileWriter(new File("Notepad.ini"));
+                  FileWriter writeToFile = new FileWriter(new File("JNotepad.ini"));
                   writeToFile.write(iniData);
                   writeToFile.close();
                }
@@ -57,8 +53,9 @@ public class Notepad implements ActionListener
                }
                frame.dispose();
             }
+            else
+               return;
          }
-         
       });
       
       try
@@ -70,7 +67,7 @@ public class Notepad implements ActionListener
          e.printStackTrace();
       } catch (UnsupportedFlavorException e)
       {
-         e.printStackTrace();
+         // happens when something other than text has been copied - ignore
       } catch (IOException e)
       {
          e.printStackTrace();
@@ -197,7 +194,6 @@ public class Notepad implements ActionListener
       // caret listener for edit events (need for status bar?)
       pad.addCaretListener(new CaretListener()
       {
-         @ Override
          public void caretUpdate(CaretEvent ce)
          {
             int length = pad.getSelectionEnd() - pad.getSelectionStart();
@@ -240,7 +236,7 @@ public class Notepad implements ActionListener
       if (!wordWrap.getState())
          statusBar.setEnabled(true);
       else
-         statusBar.setEnabled(false);
+         statusBar.setEnabled(false);                                //enable
       statusBar.setMnemonic(KeyEvent.VK_S);
       view.add(statusBar);
       menu.add(view);
@@ -250,8 +246,8 @@ public class Notepad implements ActionListener
       help.setMnemonic(KeyEvent.VK_H);
       JMenuItem viewHelp = new JMenuItem("View Help");
       viewHelp.setMnemonic(KeyEvent.VK_H);
-      viewHelp.setEnabled(false);
-      JMenuItem about = new JMenuItem("About Notepad");
+      viewHelp.setEnabled(false);                                    //enable
+      JMenuItem about = new JMenuItem("About JNotepad");
       about.addActionListener(this);
       help.add(viewHelp);
       help.addSeparator();
@@ -268,9 +264,8 @@ public class Notepad implements ActionListener
    }
    
    /*******************
-    *     Actions     *
+    *  TODO: Actions  *
     *******************/
-   @ Override
    public void actionPerformed(ActionEvent ae)
    {
       String command = ae.getActionCommand();
@@ -279,13 +274,14 @@ public class Notepad implements ActionListener
       
       switch (command)
       {
+      // file
       case "New" :
          try
          {
-            if (!NotepadExit())
+            if (!jNotepadExit())
             {
                this.frame.dispose();
-               Notepad.main(null);
+               JNotepad.main(null);
             } 
          }
          catch (IOException e)
@@ -317,12 +313,12 @@ public class Notepad implements ActionListener
          }
          break;
       case "Exit" :
-         if(!NotepadExit());
+         if(!jNotepadExit())
             this.frame.dispose();
          break;
          
          
-         
+      // edit
       case "Cut" :
          s = pad.getSelectedText();
          ss = new StringSelection(s);
@@ -363,11 +359,11 @@ public class Notepad implements ActionListener
          String ampm = "AM";
          if (c.get(Calendar.AM_PM) == 1)
             ampm = "PM";
-         
          pad.setText(pad.getText() + c.get(Calendar.HOUR) + ":" + c.get(Calendar.MINUTE)
                + " " + ampm + " " + (c.get(Calendar.MONTH) + 1) + "/"
                + c.get(Calendar.DAY_OF_MONTH) + "/" + c.get(Calendar.YEAR));
          break;
+      // format
       case "Word Wrap" :
          if (pad.getLineWrap())
          {
@@ -395,28 +391,46 @@ public class Notepad implements ActionListener
                      ,jfc.getSelectedFontSize()));
          }
          break;
-      case "About Notepad" :
+      // help
+      case "About JNotepad" :
          JOptionPane.showMessageDialog(frame,
-         "Notepad version 0.1\n(c) 2015 j. bassi");
+         "JNotepad version 0.1\n(c) 2015 j. bassi");
          break;
       }
    }
    
-   private boolean NotepadExit()
+   /**
+    * brings up save dialog
+    * @return true if cancel is pressed
+    */
+   private boolean jNotepadExit()
    {
       // check if there's text
       edited = false;
       if (!pad.getText().equals(""))
          edited = true;
+      int choice = 0;
       if(edited)
-         JOptionPane.showMessageDialog(frame,"Would you like to save");
-      return false;
+      {
+         Object[] options = {"Save","Don't Save","Cancel"};
+         choice = JOptionPane.showOptionDialog(frame, "Do you want to save changes to " + filename + "?"
+               , "JNotepad",JOptionPane.YES_NO_CANCEL_OPTION,JOptionPane.PLAIN_MESSAGE
+               ,null,options, options[0]);
+      }
+      if (choice == 0)
+      {
+         // TODO: JFileChooser here
+         return false;
+      }
+      if (choice == 1)
+         return false;
+      return true;
    }
    
    private static void createFile(File iniFile) throws IOException
    {
       iniFile.createNewFile();
-      String iniData = "j. bassi Notepad (c) 2015\nDefaultHeight:600"
+      String iniData = "j. bassi JNotepad (c) 2015\nDefaultHeight:600"
             + "\nDefaultWidth:600\nDefaultFontName:Consolas"
             + "\nDefaultFontStyle:Plain\nDefaultFontSize:12\nWordWrap:0";
       FileWriter writeToFile = new FileWriter(iniFile);
@@ -437,7 +451,7 @@ public class Notepad implements ActionListener
       
       
       
-      File iniFile = new File("Notepad.ini");
+      File iniFile = new File("JNotepad.ini");
       if (!iniFile.exists())
          createFile(iniFile);
       try
@@ -464,13 +478,25 @@ public class Notepad implements ActionListener
             break;
          }
          Font font = new Font(fontName,fStyle,fontSize);
-         new Notepad(height,width,wrap,font);
+         SwingUtilities.invokeLater(new Runnable()
+         {
+            public void run()
+            {
+                  new JNotepad(height,width,wrap,font);
+            }
+         });
       }
       catch (Exception e)
       {
          // .ini file corrupted - remake
          createFile(iniFile);
-         new Notepad(600,600,0,new Font("Consolas",Font.PLAIN,12));
+         SwingUtilities.invokeLater(new Runnable()
+         {
+            public void run()
+            {
+               new JNotepad(600,600,0,new Font("Consolas",Font.PLAIN,12));
+            }
+         });
       }
       
    }
@@ -481,30 +507,30 @@ public class Notepad implements ActionListener
       public RightClickMenu()
       {
          JMenuItem undo = new JMenuItem("Undo");
-         undo.addActionListener(Notepad.this);
+         undo.addActionListener(JNotepad.this);
          
          JMenuItem cut = new JMenuItem("Cut");
-         cut.addActionListener(Notepad.this);
+         cut.addActionListener(JNotepad.this);
          if (pad.getSelectedText() == null)
             cut.setEnabled(false);
          
          JMenuItem copy = new JMenuItem("Copy");
-         copy.addActionListener(Notepad.this);
+         copy.addActionListener(JNotepad.this);
          if (pad.getSelectedText() == null)
             copy.setEnabled(false);
          
          JMenuItem paste = new JMenuItem("Paste");
-         paste.addActionListener(Notepad.this);
+         paste.addActionListener(JNotepad.this);
          if (clipboard.equals(""))
             paste.setEnabled(false);
          
          JMenuItem delete = new JMenuItem("Delete");
-         delete.addActionListener(Notepad.this);
+         delete.addActionListener(JNotepad.this);
          if (pad.getSelectedText() == null)
             delete.setEnabled(false);
          
          JMenuItem selectAll = new JMenuItem("Select All");
-         selectAll.addActionListener(Notepad.this);
+         selectAll.addActionListener(JNotepad.this);
          
          add(undo);
          addSeparator();
