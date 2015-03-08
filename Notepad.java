@@ -8,7 +8,7 @@ import java.io.*;
 import java.util.Calendar;
 import java.util.Scanner;
 
-public class JNotepad implements ActionListener
+public class Notepad implements ActionListener
 {
    String filename = "Untitled";
    boolean edited = false; // check if there's any text before closing
@@ -18,23 +18,23 @@ public class JNotepad implements ActionListener
    JMenuItem statusBar;
    String clipboard = "";
    
-   public JNotepad(int height, int width, int wrap, Font fontType) 
+   public Notepad(int height, int width, int wrap, Font fontType) 
    {
-      frame = new JFrame(filename + " - JNotepad");
+      frame = new JFrame(filename + " - Notepad");
       frame.setSize(width,height);
       frame.setLocationRelativeTo(null);
-      frame.setIconImage(new ImageIcon("JNotepad.png").getImage());
+      frame.setIconImage(new ImageIcon("Notepad.png").getImage());
       frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
       frame.addWindowListener(new WindowAdapter()
       {
          public void windowClosing(WindowEvent we)
          {
-            if(!jNotepadExit())
+            if(!NotepadExit())
             {
                int wordWrap = 0;
                if (pad.getLineWrap())
                   wordWrap = 1;
-               String iniData = "j. bassi JNotepad (c) 2015\nDefaultHeight:"
+               String iniData = "j. bassi Notepad (c) 2015\nDefaultHeight:"
                      + frame.getHeight() + "\nDefaultWidth:" + frame.getWidth()
                      + "\nDefaultFontName:" + pad.getFont().getFontName()
                      + "\nDefaultFontStyle:" + pad.getFont().getStyle()
@@ -42,7 +42,7 @@ public class JNotepad implements ActionListener
                      + "\nWordWrap:" + wordWrap;
                try
                {
-                  FileWriter writeToFile = new FileWriter(new File("JNotepad.ini"));
+                  FileWriter writeToFile = new FileWriter(new File("Notepad.ini"));
                   writeToFile.write(iniData);
                   writeToFile.close();
                }
@@ -247,7 +247,7 @@ public class JNotepad implements ActionListener
       JMenuItem viewHelp = new JMenuItem("View Help");
       viewHelp.setMnemonic(KeyEvent.VK_H);
       viewHelp.setEnabled(false);                                    //enable
-      JMenuItem about = new JMenuItem("About JNotepad");
+      JMenuItem about = new JMenuItem("About Notepad");
       about.addActionListener(this);
       help.add(viewHelp);
       help.addSeparator();
@@ -278,10 +278,10 @@ public class JNotepad implements ActionListener
       case "New" :
          try
          {
-            if (!jNotepadExit())
+            if (!NotepadExit())
             {
                this.frame.dispose();
-               JNotepad.main(null);
+               Notepad.main(null);
             } 
          }
          catch (IOException e)
@@ -313,7 +313,7 @@ public class JNotepad implements ActionListener
          }
          break;
       case "Exit" :
-         if(!jNotepadExit())
+         if(!NotepadExit())
             this.frame.dispose();
          break;
          
@@ -392,9 +392,9 @@ public class JNotepad implements ActionListener
          }
          break;
       // help
-      case "About JNotepad" :
+      case "About Notepad" :
          JOptionPane.showMessageDialog(frame,
-         "JNotepad version 0.1\n(c) 2015 j. bassi");
+         "Notepad version 0.1\n(c) 2015 j. bassi");
          break;
       }
    }
@@ -403,7 +403,7 @@ public class JNotepad implements ActionListener
     * brings up save dialog
     * @return true if cancel is pressed
     */
-   private boolean jNotepadExit()
+   private boolean NotepadExit()
    {
       // check if there's text
       edited = false;
@@ -414,7 +414,7 @@ public class JNotepad implements ActionListener
       {
          Object[] options = {"Save","Don't Save","Cancel"};
          choice = JOptionPane.showOptionDialog(frame, "Do you want to save changes to " + filename + "?"
-               , "JNotepad",JOptionPane.YES_NO_CANCEL_OPTION,JOptionPane.PLAIN_MESSAGE
+               , "Notepad",JOptionPane.YES_NO_CANCEL_OPTION,JOptionPane.PLAIN_MESSAGE
                ,null,options, options[0]);
       }
       if (choice == 0)
@@ -430,7 +430,7 @@ public class JNotepad implements ActionListener
    private static void createFile(File iniFile) throws IOException
    {
       iniFile.createNewFile();
-      String iniData = "j. bassi JNotepad (c) 2015\nDefaultHeight:600"
+      String iniData = "j. bassi Notepad (c) 2015\nDefaultHeight:600"
             + "\nDefaultWidth:600\nDefaultFontName:Consolas"
             + "\nDefaultFontStyle:Plain\nDefaultFontSize:12\nWordWrap:0";
       FileWriter writeToFile = new FileWriter(iniFile);
@@ -451,7 +451,7 @@ public class JNotepad implements ActionListener
       
       
       
-      File iniFile = new File("JNotepad.ini");
+      File iniFile = new File("Notepad.ini");
       if (!iniFile.exists())
          createFile(iniFile);
       try
@@ -482,7 +482,7 @@ public class JNotepad implements ActionListener
          {
             public void run()
             {
-                  new JNotepad(height,width,wrap,font);
+                  new Notepad(height,width,wrap,font);
             }
          });
       }
@@ -494,7 +494,7 @@ public class JNotepad implements ActionListener
          {
             public void run()
             {
-               new JNotepad(600,600,0,new Font("Consolas",Font.PLAIN,12));
+               new Notepad(600,600,0,new Font("Consolas",Font.PLAIN,12));
             }
          });
       }
@@ -507,30 +507,30 @@ public class JNotepad implements ActionListener
       public RightClickMenu()
       {
          JMenuItem undo = new JMenuItem("Undo");
-         undo.addActionListener(JNotepad.this);
+         undo.addActionListener(Notepad.this);
          
          JMenuItem cut = new JMenuItem("Cut");
-         cut.addActionListener(JNotepad.this);
+         cut.addActionListener(Notepad.this);
          if (pad.getSelectedText() == null)
             cut.setEnabled(false);
          
          JMenuItem copy = new JMenuItem("Copy");
-         copy.addActionListener(JNotepad.this);
+         copy.addActionListener(Notepad.this);
          if (pad.getSelectedText() == null)
             copy.setEnabled(false);
          
          JMenuItem paste = new JMenuItem("Paste");
-         paste.addActionListener(JNotepad.this);
+         paste.addActionListener(Notepad.this);
          if (clipboard.equals(""))
             paste.setEnabled(false);
          
          JMenuItem delete = new JMenuItem("Delete");
-         delete.addActionListener(JNotepad.this);
+         delete.addActionListener(Notepad.this);
          if (pad.getSelectedText() == null)
             delete.setEnabled(false);
          
          JMenuItem selectAll = new JMenuItem("Select All");
-         selectAll.addActionListener(JNotepad.this);
+         selectAll.addActionListener(Notepad.this);
          
          add(undo);
          addSeparator();
