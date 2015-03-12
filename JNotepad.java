@@ -1,3 +1,12 @@
+// Name:       Bassi, Jonathan
+// Project:    #4
+// Due:        3/12/15
+// Course:     CS245-01-w15
+// 
+// Description:
+//             A notepad clone written in java utilizing swing
+
+
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.*;
@@ -18,7 +27,7 @@ public class JNotepad implements ActionListener
    String filename = "Untitled";
    String filepath = "";
    String oldfile = "";
-   boolean edited = false; // check if there's any text before closing
+   boolean edited = false;
    JFrame frame;
    JTextArea pad;
    JCheckBoxMenuItem wordWrap;
@@ -185,10 +194,12 @@ public class JNotepad implements ActionListener
       JMenuItem replace = new JMenuItem("Replace...");
       replace.addActionListener(this);
       replace.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_H,Event.CTRL_MASK));
+      replace.setEnabled(false);
       
       JMenuItem goTo = new JMenuItem("Go To...");
       goTo.addActionListener(this);
       goTo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_G,Event.CTRL_MASK));
+      goTo.setEnabled(false);
       
       JMenuItem selectAll = new JMenuItem("Select All");
       selectAll.addActionListener(this);
@@ -283,7 +294,7 @@ public class JNotepad implements ActionListener
       help.setMnemonic(KeyEvent.VK_H);
       JMenuItem viewHelp = new JMenuItem("View Help");
       viewHelp.setMnemonic(KeyEvent.VK_H);
-      viewHelp.setEnabled(false);                                    //enable
+      viewHelp.setEnabled(false);
       JMenuItem about = new JMenuItem("About JNotepad");
       about.addActionListener(this);
       help.add(viewHelp);
@@ -308,9 +319,6 @@ public class JNotepad implements ActionListener
       frame.setVisible(true);
    }
    
-   /*******************
-    *  TODO: Actions  *
-    *******************/
    public void actionPerformed(ActionEvent ae)
    {
       String command = ae.getActionCommand();
@@ -501,9 +509,16 @@ public class JNotepad implements ActionListener
       case "Time/Date" :
          Calendar cal = Calendar.getInstance();
          String ampm = "AM";
+         int hour = cal.get(Calendar.HOUR);
+         if (hour == 0)
+            hour = 12;
+         int min = cal.get(Calendar.MINUTE);
+         String smin = "" + min;
+         if (min < 10)
+            smin = "0" + min;
          if (cal.get(Calendar.AM_PM) == 1)
             ampm = "PM";
-         pad.setText(pad.getText() + cal.get(Calendar.HOUR) + ":" + cal.get(Calendar.MINUTE)
+         pad.setText(pad.getText() + hour + ":" + smin
                + " " + ampm + " " + (cal.get(Calendar.MONTH) + 1) + "/"
                + cal.get(Calendar.DAY_OF_MONTH) + "/" + cal.get(Calendar.YEAR));
          break;
@@ -711,7 +726,7 @@ public class JNotepad implements ActionListener
       }
       catch (Exception e)
       {
-         // .ini file corrupted - remake
+         // if .ini file corrupted - remake
          createFile(iniFile);
          SwingUtilities.invokeLater(new Runnable()
          {
@@ -752,6 +767,9 @@ public class JNotepad implements ActionListener
          JMenuItem undo = new JMenuItem("Undo");
          undo.addActionListener(JNotepad.this);
          
+         JMenuItem redo = new JMenuItem("Redo");
+         redo.addActionListener(JNotepad.this);
+         
          JMenuItem cut = new JMenuItem("Cut");
          cut.addActionListener(JNotepad.this);
          if (pad.getSelectedText() == null)
@@ -776,6 +794,7 @@ public class JNotepad implements ActionListener
          selectAll.addActionListener(JNotepad.this);
          
          add(undo);
+         add(redo);
          addSeparator();
          add(cut);
          add(copy);
