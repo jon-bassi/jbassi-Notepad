@@ -8,8 +8,7 @@ import java.awt.datatransfer.*;
 import java.awt.event.*;
 import java.awt.print.*;
 import java.io.*;
-import java.util.Calendar;
-import java.util.Scanner;
+import java.util.*;
 
 public class JNotepad implements ActionListener
 {
@@ -18,19 +17,20 @@ public class JNotepad implements ActionListener
    JFrame frame;
    JTextArea pad;
    JCheckBoxMenuItem wordWrap;
-   JMenuItem statusBar;
-   JPanel statusPanel;
+   JCheckBoxMenuItem statusBar;
    int statusRow = 0;
    int statusCol = 0;
    String clipboard = "";
    UndoManager undoManager = new UndoManager();
-   
+   GridBagConstraints c = new GridBagConstraints();
+   JPanel statusPane;
    JLabel status;
+   JFileChooser jfc;
    
    public JNotepad(int height, int width, int wrap, Font fontType) 
    {
       frame = new JFrame(filename + " - JNotepad");
-      frame.setLayout(new GridLayout(2,1));
+      frame.setLayout(new GridBagLayout());
       frame.setSize(width,height);
       frame.setLocationRelativeTo(null);
       frame.setIconImage(new ImageIcon("JNotepad.png").getImage());
@@ -261,12 +261,13 @@ public class JNotepad implements ActionListener
       // view
       JMenu view = new JMenu("View");
       view.setMnemonic(KeyEvent.VK_V);
-      statusBar = new JMenuItem("Status Bar");
+      statusBar = new JCheckBoxMenuItem("Status Bar",false);
       if (!wordWrap.getState())
          statusBar.setEnabled(true);
       else
          statusBar.setEnabled(false);                                //enable
       statusBar.setMnemonic(KeyEvent.VK_S);
+      statusBar.addActionListener(this);
       view.add(statusBar);
       menu.add(view);
       
@@ -283,18 +284,20 @@ public class JNotepad implements ActionListener
       help.add(about);
       menu.add(help);
       
-      
       frame.setJMenuBar(menu);
       JScrollPane pane = new JScrollPane(pad);
       pane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
       pane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-      frame.add(pane);
+      c.gridx = 0;
+      c.gridy = 0;
+      c.weightx = 1;
+      c.weighty = 0.995;
+      c.fill = GridBagConstraints.BOTH;
+      frame.add(pane,c);
       
       status = new JLabel("row: " + statusRow + "\t" + "col: " + statusCol);
-      
-      frame.add(status);
-      
-      
+      statusPane = new JPanel(new BorderLayout());
+      statusPane.add(status,BorderLayout.EAST);
       frame.setVisible(true);
    }
    
@@ -327,13 +330,55 @@ public class JNotepad implements ActionListener
             e.printStackTrace();
          }
       break;
-      case "Open" :
-         
+      case "Open..." :
+         if (filename.equals("Untitled"))
+         {
+            //would you like to save - create a new instance or ???
+         }
+         jfc = new JFileChooser();
+         String data = "";
+         int returnval = jfc.showOpenDialog(frame);
+         if (returnval == JFileChooser.APPROVE_OPTION)
+         {
+            File file = jfc.getSelectedFile();
+            filename = file.getName();
+            frame.setTitle(filename + " - JNotepad");
+            try
+            {
+               Scanner read = new Scanner(file);
+               while (read.hasNextLine())
+               {
+                  data += read.nextLine() + "\n";
+               }
+               read.close();
+            } catch (FileNotFoundException e)
+            {
+            }
+            pad.setText(data);
+            frame.revalidate();
+         }
          break;
       case "Save" :
-         
+         if (filename.equals("Untitled"))
+         {
+            // save as dialog
+         }
+         else
+         {
+            File file = new File(filename);
+            try
+            {
+               FileWriter write = new FileWriter(file);
+               write.write(pad.getText());
+               write.close();
+               edited = false;
+            } catch (IOException e)
+            {
+            }
+            
+         }
          break;
-      case "Save As" :
+      case "Save As..." :
          
          break;
       case "Page Setup" :
@@ -404,13 +449,13 @@ public class JNotepad implements ActionListener
          pad.selectAll();
          break;
       case "Time/Date" :
-         Calendar c = Calendar.getInstance();
+         Calendar cal = Calendar.getInstance();
          String ampm = "AM";
-         if (c.get(Calendar.AM_PM) == 1)
+         if (cal.get(Calendar.AM_PM) == 1)
             ampm = "PM";
-         pad.setText(pad.getText() + c.get(Calendar.HOUR) + ":" + c.get(Calendar.MINUTE)
-               + " " + ampm + " " + (c.get(Calendar.MONTH) + 1) + "/"
-               + c.get(Calendar.DAY_OF_MONTH) + "/" + c.get(Calendar.YEAR));
+         pad.setText(pad.getText() + cal.get(Calendar.HOUR) + ":" + cal.get(Calendar.MINUTE)
+               + " " + ampm + " " + (cal.get(Calendar.MONTH) + 1) + "/"
+               + cal.get(Calendar.DAY_OF_MONTH) + "/" + cal.get(Calendar.YEAR));
          break;
       // format
       case "Word Wrap" :
@@ -419,12 +464,27 @@ public class JNotepad implements ActionListener
             wordWrap.setSelected(false);
             pad.setLineWrap(false);
             statusBar.setEnabled(true);
+            if (statusBar.isSelected())
+            {
+               c.gridx = 0;
+               c.gridy = 1;
+               c.weightx = 1;
+               c.weighty = 0.001;
+               c.insets = new Insets(0,0,0,5);
+               frame.add(statusPane,c);
+               frame.revalidate();
+            }
          }
          else
          {
             wordWrap.setSelected(true);
             pad.setLineWrap(true);
             statusBar.setEnabled(false);
+            if (statusBar.isSelected())
+            {
+               frame.remove(statusPane);
+               frame.revalidate();
+            }
          }
          break;
       case "Font..." :
@@ -442,7 +502,23 @@ public class JNotepad implements ActionListener
          break;
       // view
       case "Status Bar" :
-         status.setText("row: " + statusRow + "\t" + "col: " + statusCol);
+         if (!statusBar.isSelected())
+         {
+            statusBar.setSelected(false);
+            frame.remove(statusPane);
+            frame.revalidate();
+         }
+         else
+         {
+            statusBar.setSelected(true);
+            c.gridx = 0;
+            c.gridy = 1;
+            c.weightx = 1;
+            c.weighty = 0.001;
+            c.insets = new Insets(0,0,0,5);
+            frame.add(statusPane,c);
+            frame.revalidate();
+         }
          break;
       // help
       case "About JNotepad" :
@@ -459,11 +535,8 @@ public class JNotepad implements ActionListener
    private boolean jNotepadExit()
    {
       // check if there's text
-      edited = false;
-      if (!pad.getText().equals(""))
-         edited = true;
       int choice = 0;
-      if(edited)
+      if(!edited || pad.getText().equals(""))
       {
          Object[] options = {"Save","Don't Save","Cancel"};
          choice = JOptionPane.showOptionDialog(frame, "Do you want to save changes to " + filename + "?"
