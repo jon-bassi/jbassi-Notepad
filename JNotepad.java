@@ -1,12 +1,3 @@
-// Name:       Bassi, Jonathan
-// Project:    #4
-// Due:        3/12/15
-// Course:     CS245-01-w15
-// 
-// Description:
-//             A notepad clone written in java utilizing swing
-
-
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.*;
