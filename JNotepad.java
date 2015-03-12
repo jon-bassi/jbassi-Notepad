@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.*;
 import javax.swing.filechooser.*;
 import javax.swing.filechooser.FileFilter;
@@ -9,6 +10,7 @@ import java.awt.datatransfer.*;
 import java.awt.event.*;
 import java.awt.print.*;
 import java.io.*;
+import java.text.MessageFormat;
 import java.util.*;
 
 public class JNotepad implements ActionListener
@@ -30,6 +32,7 @@ public class JNotepad implements ActionListener
    JLabel status;
    JFileChooser jfc;
    FileFilter filter = new FileNameExtensionFilter("*.txt or *.java", "txt","java");
+   FindBox finder = new FindBox();
    
    public JNotepad(int height, int width, int wrap, Font fontType) 
    {
@@ -317,6 +320,7 @@ public class JNotepad implements ActionListener
       StringSelection ss;
       Clipboard cb;
       int returnval;
+      boolean result;
       
       switch (command)
       {
@@ -367,7 +371,7 @@ public class JNotepad implements ActionListener
             {
             }
             pad.setText(oldfile);
-            frame.revalidate();
+            frame.revalidate(); 
          }
          break;
       case "Save" :
@@ -432,19 +436,16 @@ public class JNotepad implements ActionListener
          pf = pj.pageDialog(pj.defaultPage());
          break;
       case "Print..." :
-         pj = PrinterJob.getPrinterJob();
-         if (pj.printDialog())
-         {
             try
             {
-               pj.print();
+               String file = pad.getText().replaceAll("[}{]", "");
+               pad.print(new MessageFormat(filename),new MessageFormat(file));
             }
-            catch (PrinterException e)
+            catch (IllegalArgumentException | PrinterException e)
             {
                e.printStackTrace();
                System.out.println(e);
             }
-         }
          break;
       case "Exit" :
          if(!jNotepadExit())
@@ -488,9 +489,12 @@ public class JNotepad implements ActionListener
       case "Delete" :
          pad.replaceSelection("");
          break;
-         
-         // todo find and find next
-         
+      case "Find..." :
+         finder.showSelectDialog(frame);
+         break;
+      case "Find Next" :
+         finder.find(finder.findField.getText());
+         break;
       case "Select All" :
          pad.selectAll();
          break;
@@ -539,7 +543,7 @@ public class JNotepad implements ActionListener
          jfc.setDefaultName(font.getFontName());
          jfc.setDefaultStyle(font.getStyle());
          jfc.setDefaultSize(font.getSize());
-         boolean result = jfc.showSelectDialog(frame);
+         result = jfc.showSelectDialog(frame);
          if (result)
          {
             pad.setFont(new Font(jfc.getSelectedFontName(),jfc.getSelectedFontStyle()
@@ -633,17 +637,21 @@ public class JNotepad implements ActionListener
    }
    
    
-   
-   
    public static void main(String[] args) throws IOException
    {
+      final String fileToOpen;
+      final boolean openFileOnCreation;
+      
       if (args != null && args.length > 0)
       {
-         
+         fileToOpen = args[0];
+         openFileOnCreation = true;
       }
-      
-      
-      
+      else
+      {
+         openFileOnCreation = false;
+         fileToOpen = "";
+      }
       
       File iniFile = new File("JNotepad.ini");
       if (!iniFile.exists())
@@ -676,7 +684,28 @@ public class JNotepad implements ActionListener
          {
             public void run()
             {
-                  new JNotepad(height,width,wrap,font);
+                  JNotepad notepad = new JNotepad(height,width,wrap,font);
+                  if (openFileOnCreation)
+                  {
+                     File file = new File(fileToOpen);
+                     notepad.filename = file.getName();
+                     notepad.filepath = file.getAbsolutePath();
+                     notepad.frame.setTitle(notepad.filename + " - JNotepad");
+                     notepad.oldfile = "";
+                     try
+                     {
+                        Scanner read = new Scanner(file);
+                        while (read.hasNextLine())
+                        {
+                           notepad.oldfile += read.nextLine() + "\n";
+                        }
+                        read.close();
+                     } catch (FileNotFoundException e)
+                     {
+                     }
+                     notepad.pad.setText(notepad.oldfile);
+                     notepad.frame.revalidate();
+                  }
             }
          });
       }
@@ -688,7 +717,28 @@ public class JNotepad implements ActionListener
          {
             public void run()
             {
-               new JNotepad(600,600,0,new Font("Consolas",Font.PLAIN,12));
+               JNotepad notepad = new JNotepad(600,600,0,new Font("Consolas",Font.PLAIN,12));
+               if (openFileOnCreation)
+               {
+                  File file = new File(fileToOpen);
+                  notepad.filename = file.getName();
+                  notepad.filepath = file.getAbsolutePath();
+                  notepad.frame.setTitle(notepad.filename + " - JNotepad");
+                  notepad.oldfile = "";
+                  try
+                  {
+                     Scanner read = new Scanner(file);
+                     while (read.hasNextLine())
+                     {
+                        notepad.oldfile += read.nextLine() + "\n";
+                     }
+                     read.close();
+                  } catch (FileNotFoundException e)
+                  {
+                  }
+                  notepad.pad.setText(notepad.oldfile);
+                  notepad.frame.revalidate();
+               }
             }
          });
       }
@@ -697,7 +747,6 @@ public class JNotepad implements ActionListener
    
    class RightClickMenu extends JPopupMenu
    {
-      JMenuItem anItem;
       public RightClickMenu()
       {
          JMenuItem undo = new JMenuItem("Undo");
@@ -754,6 +803,215 @@ public class JNotepad implements ActionListener
       {
           RightClickMenu menu = new RightClickMenu();
           menu.show(me.getComponent(), me.getX(), me.getY());
+      }
+   }
+   
+   class FindBox extends JDialog implements ActionListener
+   {
+      
+      JTextField findField;
+      JCheckBox match;
+      JRadioButton up;
+      JRadioButton down;
+      
+      public FindBox()
+      {
+         JPanel panel = new JPanel();
+         panel.setLayout(new GridBagLayout());
+         GridBagConstraints gc = new GridBagConstraints();
+         JLabel findWhat = new JLabel("Find what:");
+         gc.fill = GridBagConstraints.HORIZONTAL;
+         gc.anchor = GridBagConstraints.LINE_START;
+         gc.weightx = 0.25;
+         gc.gridx = 0;
+         gc.gridy = 0;
+         gc.insets = new Insets(10,10,0,0);
+         panel.add(findWhat,gc);
+         
+         findField = new JTextField(15);
+         gc.fill = GridBagConstraints.HORIZONTAL;
+         gc.anchor = GridBagConstraints.CENTER;
+         gc.gridwidth = 2;
+         gc.weightx = 0.75;
+         gc.gridx = 1;
+         gc.gridy = 0;
+         gc.insets = new Insets(10,1,0,0);
+         panel.add(findField,gc);
+         
+         JButton findNext = new JButton("Find Next");
+         gc.fill = GridBagConstraints.HORIZONTAL;
+         gc.anchor = GridBagConstraints.CENTER;
+         gc.gridwidth = 1;
+         gc.weightx = 0.25;
+         gc.gridx = 3;
+         gc.gridy = 0;
+         gc.insets = new Insets(10,5,0,10);
+         panel.add(findNext,gc);
+         findNext.addActionListener(this);
+         
+         JButton cancel = new JButton("Cancel");
+         gc.fill = GridBagConstraints.HORIZONTAL;
+         gc.anchor = GridBagConstraints.CENTER;
+         gc.weightx = 0.25;
+         gc.gridx = 3;
+         gc.gridy = 1;
+         gc.insets = new Insets(10,5,0,10);
+         panel.add(cancel,gc);
+         cancel.addActionListener(this);
+         
+         match = new JCheckBox("Match case");
+         gc.fill = GridBagConstraints.NONE;
+         gc.anchor = GridBagConstraints.CENTER;
+         gc.weightx = 0.25;
+         gc.gridx = 0;
+         gc.gridy = 2;
+         gc.insets = new Insets(10,5,10,10);
+         panel.add(match,gc);
+         
+         JPanel direction = new JPanel();
+         TitledBorder titled = new TitledBorder("Direction");
+         direction.setBorder(titled);
+         ButtonGroup bg = new ButtonGroup();
+         up = new JRadioButton("Up");
+         down = new JRadioButton("Down");
+         bg.add(up);
+         bg.add(down);
+         direction.add(up);
+         direction.add(down);
+         down.setSelected(true);
+         gc.fill = GridBagConstraints.NONE;
+         gc.anchor = GridBagConstraints.CENTER;
+         gc.gridheight = 2;
+         gc.weightx = 0.25;
+         gc.gridx = 2;
+         gc.gridy = 1;
+         gc.insets = new Insets(0,0,0,0);
+         panel.add(direction,gc);
+         add(panel);
+      }
+      
+      public void actionPerformed(ActionEvent ae)
+      {
+         if (ae.getActionCommand().equals("Cancel"))
+         {
+            setVisible(false);
+         }
+         else
+         {
+            if (!findField.getText().equals(""))
+            {
+               find(findField.getText());
+            }
+         }
+      }
+      
+      public void showSelectDialog(JFrame frame)
+      {
+         setSize(430, 150);
+         setResizable(false);
+         setLocationRelativeTo(frame);
+         setAlwaysOnTop(true);
+         setVisible(true);
+      }
+      
+      public boolean findUp(String s)
+      {
+         if (match.isSelected())
+         {
+            if (pad.getSelectedText() != null && pad.getSelectedText().equals(s))
+            {
+               pad.moveCaretPosition(pad.getCaretPosition() - 1);
+            }
+            
+            String padText = pad.getText().substring(0, pad.getCaretPosition());
+            
+            if (padText.contains(s))
+            {
+               pad.select(padText.lastIndexOf(s), padText.lastIndexOf(s) + s.length());
+               return true;
+            }
+            else
+            {
+               JOptionPane.showMessageDialog(this, "Cannot find \"" + s + "\"","JNotepad",JOptionPane.INFORMATION_MESSAGE);
+               return false;
+            }
+         }
+         else
+         {
+            s = s.toLowerCase();
+            if (pad.getSelectedText() != null && pad.getSelectedText().equalsIgnoreCase(s))
+            {
+               pad.moveCaretPosition(pad.getCaretPosition() - 1);
+            }
+            
+            String padText = pad.getText().substring(0, pad.getCaretPosition()).toLowerCase();
+            
+            if (padText.contains(s))
+            {
+               pad.select(padText.lastIndexOf(s), padText.lastIndexOf(s) + s.length());
+               return true;
+            }
+            else
+            {
+               JOptionPane.showMessageDialog(this, "Cannot find \"" + s + "\"","JNotepad",JOptionPane.INFORMATION_MESSAGE);
+               return false;
+            }
+         }
+      }
+      
+      public boolean findDown(String s)
+      {
+         if (match.isSelected())
+         {
+            if (pad.getSelectedText() != null && pad.getSelectedText().equals(s))
+            {
+               pad.select(pad.getCaretPosition(),pad.getCaretPosition());
+            }
+            
+            String padText = pad.getText().substring(pad.getCaretPosition(), pad.getText().length());
+            int cPos = pad.getCaretPosition();
+            
+            if (padText.contains(s))
+            {
+               pad.select(cPos + padText.indexOf(s), cPos + padText.indexOf(s) + s.length());
+               return true;
+            }
+            else
+            {
+               JOptionPane.showMessageDialog(this, "Cannot find \"" + s + "\"","JNotepad",JOptionPane.INFORMATION_MESSAGE);
+               return false;
+            }
+         }
+         else
+         {
+            s = s.toLowerCase();
+            if (pad.getSelectedText() != null && pad.getSelectedText().equalsIgnoreCase(s))
+            {
+               pad.select(pad.getCaretPosition(),pad.getCaretPosition());
+            }
+            
+            String padText = pad.getText().substring(pad.getCaretPosition(), pad.getText().length()).toLowerCase();
+            int cPos = pad.getCaretPosition();
+            
+            if (padText.contains(s))
+            {
+               pad.select(cPos + padText.indexOf(s), cPos + padText.indexOf(s) + s.length());
+               return true;
+            }
+            else
+            {
+               JOptionPane.showMessageDialog(this, "Cannot find \"" + s + "\"","JNotepad",JOptionPane.INFORMATION_MESSAGE);
+               return false;
+            }
+         }
+      }
+      
+      public void find(String s)
+      {
+         if (up.isSelected())
+            findUp(s);
+         else
+            findDown(s);
       }
    }
 }
