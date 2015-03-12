@@ -1,8 +1,9 @@
 import javax.swing.*;
 import javax.swing.event.*;
-import javax.swing.text.BadLocationException;
+import javax.swing.filechooser.*;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.text.*;
 import javax.swing.undo.*;
-
 import java.awt.*;
 import java.awt.datatransfer.*;
 import java.awt.event.*;
@@ -13,19 +14,22 @@ import java.util.*;
 public class JNotepad implements ActionListener
 {
    String filename = "Untitled";
+   String filepath = "";
+   String oldfile = "";
    boolean edited = false; // check if there's any text before closing
    JFrame frame;
    JTextArea pad;
    JCheckBoxMenuItem wordWrap;
    JCheckBoxMenuItem statusBar;
-   int statusRow = 0;
-   int statusCol = 0;
+   int statusRow = 1;
+   int statusCol = 1;
    String clipboard = "";
    UndoManager undoManager = new UndoManager();
    GridBagConstraints c = new GridBagConstraints();
    JPanel statusPane;
    JLabel status;
    JFileChooser jfc;
+   FileFilter filter = new FileNameExtensionFilter("*.txt or *.java", "txt","java");
    
    public JNotepad(int height, int width, int wrap, Font fontType) 
    {
@@ -208,7 +212,6 @@ public class JNotepad implements ActionListener
       edit.add(timeDate);
       menu.add(edit);
       
-      // caret listener for edit events (need for status bar?)
       pad.addCaretListener(new CaretListener()
       {
          public void caretUpdate(CaretEvent ce)
@@ -217,10 +220,11 @@ public class JNotepad implements ActionListener
             
             try
             {
-               statusCol = pad.getLineOfOffset(caretPos);
-               statusRow = caretPos - pad.getLineStartOffset(statusCol);
+               statusRow = pad.getLineOfOffset(caretPos);
+               statusCol = caretPos - pad.getLineStartOffset(statusRow);
                statusCol++;
-               status.setText("row: " + statusRow + "\t" + "col: " + statusCol);
+               statusRow++;
+               status.setText("Ln " + statusRow + ", " + "Col " + statusCol);
             } catch (BadLocationException e)
             {
             }
@@ -265,7 +269,7 @@ public class JNotepad implements ActionListener
       if (!wordWrap.getState())
          statusBar.setEnabled(true);
       else
-         statusBar.setEnabled(false);                                //enable
+         statusBar.setEnabled(false);
       statusBar.setMnemonic(KeyEvent.VK_S);
       statusBar.addActionListener(this);
       view.add(statusBar);
@@ -295,7 +299,7 @@ public class JNotepad implements ActionListener
       c.fill = GridBagConstraints.BOTH;
       frame.add(pane,c);
       
-      status = new JLabel("row: " + statusRow + "\t" + "col: " + statusCol);
+      status = new JLabel("Ln " + statusRow + ", " + "Col " + statusCol);
       statusPane = new JPanel(new BorderLayout());
       statusPane.add(status,BorderLayout.EAST);
       frame.setVisible(true);
@@ -312,6 +316,7 @@ public class JNotepad implements ActionListener
       String s;
       StringSelection ss;
       Clipboard cb;
+      int returnval;
       
       switch (command)
       {
@@ -331,41 +336,65 @@ public class JNotepad implements ActionListener
          }
       break;
       case "Open..." :
-         if (filename.equals("Untitled"))
+         edited = false;
+         if (!pad.getText().equals(""))
+            edited = true;
+         if (oldfile.equals(pad.getText()))
+            edited = false;
+         if (edited)
          {
-            //would you like to save - create a new instance or ???
+            jNotepadExit();
          }
          jfc = new JFileChooser();
-         String data = "";
-         int returnval = jfc.showOpenDialog(frame);
+         jfc.setFileFilter(filter);
+         returnval = jfc.showOpenDialog(frame);
          if (returnval == JFileChooser.APPROVE_OPTION)
          {
             File file = jfc.getSelectedFile();
             filename = file.getName();
+            filepath = file.getAbsolutePath();
             frame.setTitle(filename + " - JNotepad");
+            oldfile = "";
             try
             {
                Scanner read = new Scanner(file);
                while (read.hasNextLine())
                {
-                  data += read.nextLine() + "\n";
+                  oldfile += read.nextLine() + "\n";
                }
                read.close();
             } catch (FileNotFoundException e)
             {
             }
-            pad.setText(data);
+            pad.setText(oldfile);
             frame.revalidate();
          }
          break;
       case "Save" :
          if (filename.equals("Untitled"))
          {
-            // save as dialog
+            jfc = new JFileChooser();
+            returnval = jfc.showSaveDialog(frame);
+            if (returnval == JFileChooser.APPROVE_OPTION)
+            {
+               File file = jfc.getSelectedFile();
+               try
+               {
+                  FileWriter write = new FileWriter(file);
+                  write.write(pad.getText());
+                  write.close();
+                  edited = false;
+                  filename = file.getName();
+                  filepath = file.getAbsolutePath();
+                  frame.setTitle(filename + " - JNotepad");
+               } catch (IOException e)
+               {
+               }
+            }
          }
          else
          {
-            File file = new File(filename);
+            File file = new File(filepath);
             try
             {
                FileWriter write = new FileWriter(file);
@@ -379,7 +408,24 @@ public class JNotepad implements ActionListener
          }
          break;
       case "Save As..." :
-         
+         jfc = new JFileChooser();
+         returnval = jfc.showSaveDialog(frame);
+         if (returnval == JFileChooser.APPROVE_OPTION)
+         {
+            File file = jfc.getSelectedFile();
+            try
+            {
+               FileWriter write = new FileWriter(file);
+               write.write(pad.getText());
+               write.close();
+               edited = false;
+               filename = file.getName();
+               filepath = file.getAbsolutePath();
+               frame.setTitle(filename + " - JNotepad");
+            } catch (IOException e)
+            {
+            }
+         }
          break;
       case "Page Setup" :
          pj = PrinterJob.getPrinterJob();
@@ -443,7 +489,7 @@ public class JNotepad implements ActionListener
          pad.replaceSelection("");
          break;
          
-         
+         // todo find and find next
          
       case "Select All" :
          pad.selectAll();
@@ -535,8 +581,13 @@ public class JNotepad implements ActionListener
    private boolean jNotepadExit()
    {
       // check if there's text
-      int choice = 0;
-      if(!edited || pad.getText().equals(""))
+      edited = false;
+      if (!pad.getText().equals(""))
+         edited = true;
+      if (oldfile.equals(pad.getText()))
+         edited = false;
+      int choice = 1;
+      if(edited)
       {
          Object[] options = {"Save","Don't Save","Cancel"};
          choice = JOptionPane.showOptionDialog(frame, "Do you want to save changes to " + filename + "?"
@@ -545,7 +596,24 @@ public class JNotepad implements ActionListener
       }
       if (choice == 0)
       {
-         // TODO: JFileChooser here
+         jfc = new JFileChooser();
+         int returnval = jfc.showSaveDialog(frame);
+         if (returnval == JFileChooser.APPROVE_OPTION)
+         {
+            File file = jfc.getSelectedFile();
+            try
+            {
+               FileWriter write = new FileWriter(file);
+               write.write(pad.getText());
+               write.close();
+               edited = false;
+               filename = file.getName();
+               filepath = file.getAbsolutePath();
+               frame.setTitle(filename + " - JNotepad");
+            } catch (IOException e)
+            {
+            }
+         }
          return false;
       }
       if (choice == 1)
