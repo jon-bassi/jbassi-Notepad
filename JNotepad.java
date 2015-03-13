@@ -437,7 +437,9 @@ public class JNotepad implements ActionListener
       case "Print..." :
             try
             {
+               // can't print files with { and } if this isn't here, don't ask me why it works
                String file = pad.getText().replaceAll("[}{]", "");
+               
                pad.print(new MessageFormat(filename),new MessageFormat(file));
             }
             catch (IllegalArgumentException | PrinterException e)
